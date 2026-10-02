@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
   schedule:
     - cron: "*/5 * * * *"
 
@@ -38,7 +39,7 @@ jobs:
         run: node scripts/build-site.mjs
 
       - name: Check the fixed Scraps URL once
-        if: github.event_name == 'schedule'
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         run: node scripts/check-status.mjs
 
       - name: Upload Pages artifact
