@@ -1,47 +1,39 @@
-# Hack Club Scraps Down Detector
+# Hack Club Scraps status
 
-A small Streamlit page that checks whether `scraps.hackclub.com` responds. The
-target is fixed in the server code; visitors cannot enter another URL.
+A small static dashboard for the fixed Scraps homepage at `https://scraps.hackclub.com/`.
 
-## Request limits
+After GitHub Pages is enabled, the dashboard is served from:
 
-- The server makes a `GET` request with a 5-second timeout.
-- The request identifies this detector and does not follow redirects to other
-  hosts.
-- Results, including failures, are shared across browser sessions in one server
-  process for at least 60 seconds. Concurrent sessions wait for and reuse the
-  same result.
-- The refresh slider starts at 60 seconds and ranges up to 5 minutes. It cannot
-  make checks run faster than the shared 60-second limit.
-- The status area refreshes independently of the rest of the page using
-  Streamlit fragments (Streamlit 1.37 or newer).
-- Each server process keeps its own cache. If the service runs multiple
-  replicas, each replica can make one request per minute; keep one replica for
-  a single shared request schedule.
-- Timeouts and connection failures show a short status message. Raw request
-  exception details are not displayed to visitors.
+<https://connorsawaya.github.io/Hack-Club-Scraps-Down-Detector/>
 
-## Run locally
+## How it works
 
-```bash
-python -m pip install -r requirements.txt
-streamlit run main.py
-```
+- `publish-pages.yml` runs from the latest `main` revision every five minutes.
+- Each scheduled run makes exactly one `GET` to the fixed Scraps URL, with a five-second timeout and redirects disabled. The URL is not configurable by visitors or workflow inputs.
+- HTTP errors, redirects, timeouts, and connection failures become a sanitized status snapshot; the Pages deployment continues after those target errors. There are no retries.
+- The browser reads only the dashboard's `status.json` and refreshes that file every minute. It never probes Scraps directly.
+- GitHub Actions and Pages can delay scheduled runs or publication. GitHub can also disable schedules on public repositories after 60 days without repository activity. The timestamp on the page shows when the latest attempt ran.
+- The workflow needs no API keys or repository secrets. Its job permissions are limited to reading source and publishing a Pages artifact.
 
-## Tests
+## Enable GitHub Pages
 
-The status probe tests use fake clocks and mocked responses, so they do not
-contact Scraps:
+After merging, a repository administrator should set **Settings → Pages → Build and deployment → Source → GitHub Actions**. The scheduled workflow then publishes the static site from `main`; it does not run on pushes, so status requests remain limited to the five-minute schedule. A separate workflow tests pull requests and `main` without contacting Scraps.
+
+## Run checks locally
+
+These commands only use fakes or local files; they do not contact Scraps:
 
 ```bash
-python -m unittest discover -v
+node --test tests/status-probe.test.mjs
+node scripts/build-site.mjs
 ```
 
-## Railway
+The build output is written to `dist/`. The checked-in `site/status.json` remains a pending placeholder until a scheduled deployment creates a fresh snapshot.
 
-`Procfile` and `railway.json` start Streamlit on Railway's `$PORT`. No API keys
-or other environment variables are required.
+## Project layout
 
-## Screenshot
-
-![Scraps Down Detector](https://github.com/user-attachments/assets/fb041e2b-bb2d-4356-945b-dfca4465dc25)
+- `site/` contains the static dashboard and offline fallback state.
+- `scripts/check-status.mjs` contains the one-request fixed-target probe.
+- `scripts/build-site.mjs` validates and assembles the Pages artifact.
+- `.github/workflows/publish-pages.yml` runs the scheduled check and deployment.
+- `.github/workflows/test-pages.yml` runs the offline tests on pull requests and `main`.
