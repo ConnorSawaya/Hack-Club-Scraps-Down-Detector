@@ -1,6 +1,9 @@
 name: Publish Scraps status to GitHub Pages
 
 on:
+  push:
+    branches:
+      - main
   schedule:
     - cron: "*/5 * * * *"
 
@@ -22,7 +25,7 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Check out the scheduled main revision
+      - name: Check out the main revision
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Configure Pages
@@ -35,6 +38,7 @@ jobs:
         run: node scripts/build-site.mjs
 
       - name: Check the fixed Scraps URL once
+        if: github.event_name == 'schedule'
         run: node scripts/check-status.mjs
 
       - name: Upload Pages artifact
