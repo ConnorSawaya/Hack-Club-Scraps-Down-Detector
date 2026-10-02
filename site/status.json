@@ -1,0 +1,7 @@
+{
+  "state": "pending",
+  "reason": "pending",
+  "checkedAt": null,
+  "statusCode": null,
+  "message": "The first scheduled check has not run yet."
+}
