@@ -138,3 +138,26 @@ test("timeout and HTTP error snapshots are written for Pages publication", async
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+test("dashboard status fetch is allowed only from its GitHub Pages origin", async () => {
+  const html = await readFile(new URL("../site/index.html", import.meta.url), "utf8");
+  const app = await readFile(new URL("../site/app.js", import.meta.url), "utf8");
+  const policy = html.match(/<meta http-equiv="Content-Security-Policy" content="([^"]+)"/i)?.[1];
+
+  assert.ok(policy, "the dashboard must keep an explicit Content Security Policy");
+  const connectSource = policy
+    .split(";")
+    .map((directive) => directive.trim())
+    .find((directive) => directive.startsWith("connect-src "));
+  assert.ok(connectSource, "the dashboard must define connect-src");
+  assert.deepEqual(connectSource.split(/\s+/).slice(1), [
+    "'self'",
+    "https://connorsawaya.github.io",
+  ]);
+  assert.match(app, /new URL\("\.\/status\.json",\s*window\.location\.href\)/);
+  assert.match(app, /fetch\(url,/);
+  assert.match(
+    html,
+    /href="https:\/\/scraps\.hackclub\.com\/" target="_blank" rel="noopener noreferrer"/,
+  );
+});
